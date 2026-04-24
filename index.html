@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Everything Media — an AI film studio, built by filmmakers</title>
+    <meta name="description" content="An AI film studio, built by filmmakers. Tools change. Taste doesn't.">
+    <meta name="theme-color" content="#0A0A0B">
+
+    <meta property="og:title" content="Everything Media">
+    <meta property="og:description" content="An AI film studio, built by filmmakers.">
+    <meta property="og:type" content="website">
+
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><circle cx=%2250%22 cy=%2250%22 r=%2242%22 fill=%22none%22 stroke=%22%23B8412F%22 stroke-width=%226%22/></svg>">
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;0,9..144,500;1,9..144,300;1,9..144,400&family=JetBrains+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+
+    <!-- GSAP for timeline animation & ScrollTrigger -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
+
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <!-- ==================== LETTERBOX — persistent 2.39:1 frame ==================== -->
+    <div class="letterbox top" aria-hidden="true">
+        <span class="lb-rule"></span>
+        <span class="lb-corner tl"></span>
+        <span class="lb-corner tr"></span>
+    </div>
+    <div class="letterbox bottom" aria-hidden="true">
+        <span class="lb-rule"></span>
+        <span class="lb-corner bl"></span>
+        <span class="lb-corner br"></span>
+    </div>
+
+    <!-- ==================== GRAIN — real 35mm loop if available, CSS fallback ==================== -->
+    <div class="grain-wrap" aria-hidden="true">
+        <video class="grain-video" autoplay muted loop playsinline poster="">
+            <!-- Drop a real grain loop file named `grain.mp4` in the project root.
+                 If missing, the CSS grain below takes over. See assets-guide.md -->
+            <source src="grain.mp4" type="video/mp4">
+        </video>
+        <div class="grain-css"></div>
+    </div>
+
+    <!-- ==================== CURSOR ==================== -->
+    <div class="cursor" id="cursor" aria-hidden="true">
+        <span class="cur-h"></span>
+        <span class="cur-v"></span>
+        <span class="cur-label"></span>
+    </div>
+
+    <!-- ==================== PRELOADER — the opening frame ==================== -->
+    <div id="preloader">
+        <div class="pl-frame">
+            <div class="pl-count mono" id="pl-count">01</div>
+        </div>
+    </div>
+
+    <!-- ==================== SCRUB-BAR NAV (vertical, left edge) ==================== -->
+    <aside class="scrubnav" id="scrubnav" aria-hidden="false">
+        <div class="sn-rail">
+            <div class="sn-fill" id="sn-fill"></div>
+            <a class="sn-tick" data-target="#s-entry" data-label="entry">
+                <span class="sn-dot"></span>
+                <span class="sn-num mono">01</span>
+            </a>
+            <a class="sn-tick" data-target="#s-position" data-label="taste">
+                <span class="sn-dot"></span>
+                <span class="sn-num mono">02</span>
+            </a>
+            <a class="sn-tick" data-target="#s-work" data-label="work">
+                <span class="sn-dot"></span>
+                <span class="sn-num mono">03</span>
+            </a>
+            <a class="sn-tick" data-target="#s-method" data-label="method">
+                <span class="sn-dot"></span>
+                <span class="sn-num mono">04</span>
+            </a>
+            <a class="sn-tick" data-target="#s-conviction" data-label="bar">
+                <span class="sn-dot"></span>
+                <span class="sn-num mono">05</span>
+            </a>
+            <a class="sn-tick" data-target="#s-contact" data-label="contact">
+                <span class="sn-dot"></span>
+                <span class="sn-num mono">06</span>
+            </a>
+        </div>
+        <div class="sn-meta">
+            <span class="sn-current mono" id="sn-current">entry</span>
+            <span class="sn-time mono" id="sn-time">00:00:00</span>
+        </div>
+    </aside>
+
+    <!-- ==================== TOP-RIGHT UTILITY (accessibility fallback nav + sound) ==================== -->
+    <header class="topbar">
+        <a href="#s-entry" class="tb-mark">
+            <span class="tb-circle"></span>
+            <span class="tb-name mono">everything media</span>
+        </a>
+        <nav class="tb-links">
+            <a href="#s-work">work</a>
+            <a href="#s-method">method</a>
+            <a href="#s-contact" class="tb-cta">start <span class="arrow">→</span></a>
+        </nav>
+        <button class="tb-mobile" id="tb-mobile" aria-label="open menu">
+            <span></span><span></span>
+        </button>
+    </header>
+
+    <!-- sound toggle — nearly invisible bottom-right -->
+    <button class="sound-toggle" id="sound-toggle" aria-label="toggle ambient sound" data-state="off">
+        <span class="st-icon">
+            <span class="st-line l1"></span>
+            <span class="st-line l2"></span>
+            <span class="st-line l3"></span>
+        </span>
+        <span class="st-label mono">sound off</span>
+    </button>
+
+    <!-- mobile menu (rarely used — scrubnav is primary on desktop) -->
+    <div id="mobile-menu">
+        <button class="menu-close" id="menu-close" aria-label="close menu">×</button>
+        <a href="#s-work" class="mobile-link">work</a>
+        <a href="#s-method" class="mobile-link">method</a>
+        <a href="#s-contact" class="mobile-link">start a project</a>
+        <div class="mobile-menu-footer mono">hello@everythingmedia.co.in</div>
+    </div>
+
+    <!-- optional ambient projector audio — file is user-supplied (see assets-guide.md) -->
+    <audio id="projector-audio" loop preload="auto">
+        <source src="projector.mp3" type="audio/mpeg">
+    </audio>
+
+    <!-- ==================== MAIN CONTENT ==================== -->
+    <main>
+
+        <!-- ==================== 01 / ENTRY ==================== -->
+        <section id="s-entry" class="section section-entry">
+            <div class="entry-media">
+                <div class="entry-stills" id="entry-stills">
+                    <div class="entry-still" data-meta="01 · 35mm · f/2.0" style="background-image: url('https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?auto=format&fit=crop&q=90&w=2400');"></div>
+                    <div class="entry-still" data-meta="02 · 50mm · f/1.8" style="background-image: url('https://images.unsplash.com/photo-1478720568477-152d9b164e26?auto=format&fit=crop&q=90&w=2400');"></div>
+                    <div class="entry-still" data-meta="03 · 85mm · f/2.8" style="background-image: url('https://images.unsplash.com/photo-1536440136628-849c177e76a1?auto=format&fit=crop&q=90&w=2400');"></div>
+                    <div class="entry-still" data-meta="04 · 24mm · f/2.0" style="background-image: url('https://images.unsplash.com/photo-1485846234645-a62644f84728?auto=format&fit=crop&q=90&w=2400');"></div>
+                    <div class="entry-still" data-meta="05 · 35mm · f/1.4" style="background-image: url('https://images.unsplash.com/photo-1611348586840-ea9872d33411?auto=format&fit=crop&q=90&w=2400');"></div>
+                </div>
+                <div class="entry-vignette"></div>
+            </div>
+
+            <div class="entry-content">
+                <div class="wordmark-block">
+                    <h1 class="wordmark" id="wordmark">
+                        <span class="wm-line" data-text="EVERYTHING">
+                            <span class="wm-letters" data-word="EVERYTHING"></span>
+                        </span>
+                        <span class="wm-line" data-text="MEDIA">
+                            <span class="wm-letters" data-word="MEDIA"></span>
+                        </span>
+                    </h1>
+                </div>
+                <p class="entry-sub" id="entry-sub">
+                    <em>An AI film studio,</em> built by filmmakers.
+                </p>
+            </div>
+
+            <div class="entry-bottom">
+                <div class="eb-left mono">
+                    <span id="entry-meta">01 · 35mm · f/2.0</span>
+                </div>
+                <div class="eb-center">
+                    <span class="thesis-rule"></span>
+                    <span class="thesis-text mono">tools change. taste doesn't.</span>
+                    <span class="thesis-rule"></span>
+                </div>
+                <div class="eb-right">
+                    <span class="scroll-cue mono">
+                        <span>scroll</span>
+                        <span class="scroll-line"></span>
+                    </span>
+                </div>
+            </div>
+        </section>
+
+        <!-- ==================== 02 / POSITIONING ==================== -->
+        <section id="s-position" class="section section-position">
+            <div class="pos-head">
+                <span class="slate mono"><span class="slate-red">02</span> <span class="slate-dim">/ taste</span></span>
+            </div>
+
+            <div class="pos-stage">
+                <div class="pos-thesis">
+                    <div class="pt-half left" id="pt-tools">
+                        <span class="pt-word">Tools</span>
+                        <span class="pt-word">change.</span>
+                    </div>
+                    <div class="pt-half right" id="pt-taste">
+                        <span class="pt-word"><em>Taste</em></span>
+                        <span class="pt-word"><em>doesn't.</em></span>
+                    </div>
+                </div>
+
+                <div class="pos-caption" id="pos-caption">
+                    <p>A team of <em>directors, artists, and engineers.</em></p>
+                    <p>People who care about the frame as much as the deadline.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- ==================== 03 / WORK — CINEMA MODE ==================== -->
+        <section id="s-work" class="section section-work">
+            <div class="work-intro">
+                <span class="slate mono"><span class="slate-red">03</span> <span class="slate-dim">/ work</span></span>
+                <h2 class="work-headline">The <em>work.</em></h2>
+            </div>
+
+            <!-- Cinema takeover: this wrapper gets pinned; a single "screen" plays projects one at a time -->
+            <div class="cinema" id="cinema">
+                <!-- Top + bottom mattes expand inward when pinned -->
+                <div class="cinema-matte top"></div>
+                <div class="cinema-matte bottom"></div>
+
+                <!-- The "screen" — single image/video area that changes per scroll step -->
+                <div class="cinema-screen">
+                    <div class="rec-indicator">
+                        <span class="rec-dot"></span>
+                        <span class="rec-text mono">rec</span>
+                    </div>
+
+                    <div class="cinema-slides" id="cinema-slides">
+                        <div class="cinema-slide active" data-idx="0">
+                            <img src="https://images.unsplash.com/photo-1536440136628-849c177e76a1?auto=format&fit=crop&q=90&w=2400" alt="JioStar">
+                            <div class="slide-label">
+                                <div class="sl-left">
+                                    <span class="sl-num mono">01 / 05</span>
+                                    <h3 class="sl-name">JioStar</h3>
+                                    <p class="sl-logline"><em>Nine channels. One family.</em></p>
+                                </div>
+                                <div class="sl-right mono">
+                                    <span>01:23:06</span>
+                                    <span class="dim">2026</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="cinema-slide" data-idx="1">
+                            <img src="https://images.unsplash.com/photo-1485846234645-a62644f84728?auto=format&fit=crop&q=90&w=2400" alt="Hero Vida">
+                            <div class="slide-label">
+                                <div class="sl-left">
+                                    <span class="sl-num mono">02 / 05</span>
+                                    <h3 class="sl-name">Hero Vida</h3>
+                                    <p class="sl-logline"><em>Electric. Where a crane can't go.</em></p>
+                                </div>
+                                <div class="sl-right mono">
+                                    <span>00:47:22</span>
+                                    <span class="dim">2026</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="cinema-slide" data-idx="2">
+                            <img src="https://images.unsplash.com/photo-1611348586840-ea9872d33411?auto=format&fit=crop&q=90&w=2400" alt="Krishna">
+                            <div class="slide-label">
+                                <div class="sl-left">
+                                    <span class="sl-num mono">03 / 05</span>
+                                    <h3 class="sl-name">Krishna</h3>
+                                    <p class="sl-logline"><em>The first frames of something new.</em></p>
+                                </div>
+                                <div class="sl-right mono">
+                                    <span>00:12:08</span>
+                                    <span class="dim">2026</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="cinema-slide" data-idx="3">
+                            <img src="https://images.unsplash.com/photo-1574267432644-f410f8ec2d4b?auto=format&fit=crop&q=90&w=2400" alt="Surili Didi">
+                            <div class="slide-label">
+                                <div class="sl-left">
+                                    <span class="sl-num mono">04 / 05</span>
+                                    <h3 class="sl-name">Surili Didi</h3>
+                                    <p class="sl-logline"><em>A character, engineered.</em></p>
+                                </div>
+                                <div class="sl-right mono">
+                                    <span>animation</span>
+                                    <span class="dim">2026</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="cinema-slide" data-idx="4">
+                            <img src="https://images.unsplash.com/photo-1478720568477-152d9b164e26?auto=format&fit=crop&q=90&w=2400" alt="Untitled">
+                            <div class="slide-label">
+                                <div class="sl-left">
+                                    <span class="sl-num mono">05 / 05</span>
+                                    <h3 class="sl-name">Untitled</h3>
+                                    <p class="sl-logline"><em>The kind we make when nobody's asking.</em></p>
+                                </div>
+                                <div class="sl-right mono">
+                                    <span>02:04:17</span>
+                                    <span class="dim">2026</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Cinema progress — thin red bar across the bottom of the screen -->
+                    <div class="cinema-progress"><div class="cp-fill" id="cp-fill"></div></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ==================== 04 / METHOD — HORIZONTAL TIMELINE ==================== -->
+        <section id="s-method" class="section section-method">
+            <div class="method-intro">
+                <span class="slate mono"><span class="slate-red">04</span> <span class="slate-dim">/ method</span></span>
+                <h2 class="method-headline"><em>How we work.</em></h2>
+            </div>
+
+            <div class="timeline-pin" id="timeline-pin">
+                <div class="timeline-inner">
+                    <div class="tl-rail">
+                        <div class="tl-fill" id="tl-fill"></div>
+                    </div>
+                    <div class="tl-steps" id="tl-steps">
+                        <article class="tl-step" data-step="1">
+                            <span class="tl-num mono">01</span>
+                            <div class="tl-dot"></div>
+                            <div class="tl-body">
+                                <h3 class="tl-title"><em>We start with the feeling.</em></h3>
+                                <p class="tl-text">Before references, before tools. What should this make someone feel. Everything after serves that answer.</p>
+                            </div>
+                        </article>
+
+                        <article class="tl-step" data-step="2">
+                            <span class="tl-num mono">02</span>
+                            <div class="tl-dot"></div>
+                            <div class="tl-body">
+                                <h3 class="tl-title"><em>We build the world.</em></h3>
+                                <p class="tl-text">Palette, lens, light, texture. The visual universe the work will live in. Decided on paper, before the first frame gets made.</p>
+                            </div>
+                        </article>
+
+                        <article class="tl-step" data-step="3">
+                            <span class="tl-num mono">03</span>
+                            <div class="tl-dot"></div>
+                            <div class="tl-body">
+                                <h3 class="tl-title"><em>We compose every shot.</em></h3>
+                                <p class="tl-text">Every frame is a decision. The same care a cinematographer brings to a set.</p>
+                            </div>
+                        </article>
+
+                        <article class="tl-step" data-step="4">
+                            <span class="tl-num mono">04</span>
+                            <div class="tl-dot"></div>
+                            <div class="tl-body">
+                                <h3 class="tl-title"><em>We direct the motion.</em></h3>
+                                <p class="tl-text">Pace, pause, the weight of a beat. What moves, and what doesn't. Motion is how a picture becomes a feeling.</p>
+                            </div>
+                        </article>
+
+                        <article class="tl-step" data-step="5">
+                            <span class="tl-num mono">05</span>
+                            <div class="tl-dot"></div>
+                            <div class="tl-body">
+                                <h3 class="tl-title"><em>We finish when it's right.</em></h3>
+                                <p class="tl-text">Color, sound, the final cut. Done is when the work stops asking for changes — not when the calendar asks for delivery.</p>
+                            </div>
+                        </article>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ==================== 05 / CONVICTION ==================== -->
+        <section id="s-conviction" class="section section-conviction">
+            <div class="conv-inner">
+                <h2 class="conv-claim">
+                    <span class="conv-l c1">The best work feels like someone</span>
+                    <span class="conv-l c2"><em>couldn't stop thinking about it.</em></span>
+                    <span class="conv-gap"></span>
+                    <span class="conv-l c3">Work you'd <em>watch twice.</em></span>
+                </h2>
+                <div class="conv-rule" id="conv-rule"></div>
+                <p class="conv-landing mono" id="conv-landing">— that's the bar we're working to.</p>
+            </div>
+        </section>
+
+        <!-- ==================== 06 / CONTACT ==================== -->
+        <section id="s-contact" class="section section-contact">
+            <div class="contact-intro">
+                <span class="slate mono"><span class="slate-red">06</span> <span class="slate-dim">/ contact</span></span>
+                <h2 class="contact-headline"><em>Let's talk about<br>what you're making.</em></h2>
+                <p class="contact-sub mono">we reply to the briefs we can do justice to.</p>
+            </div>
+
+            <form id="contact-form" class="contact-form" novalidate>
+                <div class="form-row">
+                    <div class="form-field">
+                        <input type="text" id="f-name" name="name" required autocomplete="name" placeholder=" ">
+                        <label for="f-name">your name</label>
+                        <span class="form-line"></span>
+                    </div>
+                    <div class="form-field">
+                        <input type="text" id="f-company" name="company" autocomplete="organization" placeholder=" ">
+                        <label for="f-company">company or project</label>
+                        <span class="form-line"></span>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-field">
+                        <input type="email" id="f-email" name="email" required autocomplete="email" placeholder=" ">
+                        <label for="f-email">email</label>
+                        <span class="form-line"></span>
+                    </div>
+                    <div class="form-field">
+                        <select id="f-type" name="type" required>
+                            <option value="" disabled selected></option>
+                            <option value="brand-film">brand film</option>
+                            <option value="ad">ad</option>
+                            <option value="music-video">music video</option>
+                            <option value="motion">motion</option>
+                            <option value="trailer">trailer</option>
+                            <option value="other">something else</option>
+                        </select>
+                        <label for="f-type">type of work</label>
+                        <span class="form-line"></span>
+                    </div>
+                </div>
+
+                <div class="form-row single">
+                    <div class="form-field">
+                        <textarea id="f-message" name="message" rows="4" required placeholder=" "></textarea>
+                        <label for="f-message">tell us about it — what you're making, what you've tried, what it should feel like</label>
+                        <span class="form-line"></span>
+                    </div>
+                </div>
+
+                <div class="form-submit-row">
+                    <button type="submit" class="submit-btn" data-cursor="send" data-label="send">
+                        <span class="submit-text">send</span>
+                        <span class="submit-arrow">→</span>
+                    </button>
+                    <div class="form-status mono" id="form-status"></div>
+                </div>
+            </form>
+
+            <div class="contact-direct">
+                <span class="cd-label mono dim">or write directly</span>
+                <a href="mailto:hello@everythingmedia.co.in" class="direct-email" data-cursor="type" data-label="@">hello@everythingmedia.co.in</a>
+            </div>
+        </section>
+
+        <!-- ==================== FOOTER — "FIN" ==================== -->
+        <footer class="footer">
+            <div class="fin">
+                <span class="fin-rule"></span>
+                <span class="fin-word">FIN</span>
+                <span class="fin-rule"></span>
+            </div>
+            <div class="footer-mark">
+                <span class="fm-circle"></span>
+                <span class="fm-name mono">everything media</span>
+            </div>
+            <div class="footer-bottom mono">
+                <span class="dim">© 2026</span>
+            </div>
+        </footer>
+
+    </main>
+
+    <script src="script.js"></script>
+</body>
+</html>
